@@ -66,6 +66,7 @@ class pgm_socket_t
                              uint16_t *port_number);
 
     //   Get receiver fds and store them into user allocated memory.
+    // FD is file desciptor of socket
     void get_receiver_fds (fd_t *receive_fd_, fd_t *waiting_pipe_fd_);
 
     //   Get sender and receiver fds and store it to user allocated

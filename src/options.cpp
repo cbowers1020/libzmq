@@ -229,6 +229,7 @@ zmq::options_t::options_t () :
     tcp_keepalive_cnt (-1),
     tcp_keepalive_idle (-1),
     tcp_keepalive_intvl (-1),
+    norm_fixed_rate (100000);
     mechanism (ZMQ_NULL),
     as_server (0),
     gss_principal_nt (ZMQ_GSSAPI_NT_HOSTBASED),
@@ -528,6 +529,21 @@ int zmq::options_t::setsockopt (int option_,
                 return 0;
             }
             break;
+
+        case ZMQ_NORM_FIXED_RATE:
+            if (is_int && value > 0) {
+                norm_fixed_rate = value;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_CONGESTION_CONTROL:
+            return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
+                                                     &norm_congest_control);
+
+        case ZMQ_NORM_UNICAST_FEEDBACK:
+            return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
+                                                     &norm_unicast_feedback);
 
         case ZMQ_IMMEDIATE:
             // TODO why is immediate not bool (and called non_immediate, as its meaning appears to be reversed)
@@ -1119,6 +1135,27 @@ int zmq::options_t::getsockopt (int option_,
         case ZMQ_TCP_KEEPALIVE_INTVL:
             if (is_int) {
                 *value = tcp_keepalive_intvl;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_FIXED_RATE:
+            if (is_int) {
+                *value = norm_fixed_rate;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_CONGESTION_CONTROL:
+            if (is_int) {
+                *value = norm_congest_control;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_UNICAST_FEEDBACK:
+            if (is_int) {
+                *value = norm_unicast_feedback;
                 return 0;
             }
             break;

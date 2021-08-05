@@ -183,6 +183,12 @@ struct options_t
     typedef std::vector<tcp_address_mask_t> tcp_accept_filters_t;
     tcp_accept_filters_t tcp_accept_filters;
 
+    // NORM options
+    int norm_fixed_rate;
+    bool norm_congest_control;
+    bool norm_unicast_feedback;
+    
+
     // IPC accept() filters
 #if defined ZMQ_HAVE_SO_PEERCRED || defined ZMQ_HAVE_LOCAL_PEERCRED
     typedef std::set<uid_t> ipc_uid_accept_filters_t;
