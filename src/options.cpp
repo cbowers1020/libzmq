@@ -229,7 +229,6 @@ zmq::options_t::options_t () :
     tcp_keepalive_cnt (-1),
     tcp_keepalive_idle (-1),
     tcp_keepalive_intvl (-1),
-    norm_fixed_rate (100000);
     mechanism (ZMQ_NULL),
     as_server (0),
     gss_principal_nt (ZMQ_GSSAPI_NT_HOSTBASED),
@@ -268,6 +267,14 @@ zmq::options_t::options_t () :
     vmci_buffer_min_size = 0;
     vmci_buffer_max_size = 0;
     vmci_connect_timeout = -1;
+#endif
+
+#if defined ZMQ_HAVE_NORM
+    norm_fixed = 100000;
+    norm_cc = true;
+    norm_cce = false;
+    norm_ccl = false;
+    norm_unicast_nack = false;
 #endif
 }
 
@@ -530,20 +537,30 @@ int zmq::options_t::setsockopt (int option_,
             }
             break;
 
-        case ZMQ_NORM_FIXED_RATE:
+#if defined ZMQ_HAVE_NORM
+        case ZMQ_NORM_FIXED:
             if (is_int && value > 0) {
-                norm_fixed_rate = value;
+                norm_fixed = value;
                 return 0;
             }
             break;
 
-        case ZMQ_NORM_CONGESTION_CONTROL:
+        case ZMQ_NORM_CC:
             return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
-                                                     &norm_congest_control);
+                                                     &norm_cc);
 
-        case ZMQ_NORM_UNICAST_FEEDBACK:
+        case ZMQ_NORM_CCE:
             return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
-                                                     &norm_unicast_feedback);
+                                                     &norm_cce);
+
+        case ZMQ_NORM_CCL:
+            return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
+                                                     &norm_ccl);
+
+        case ZMQ_NORM_UNICAST_NACK:
+            return do_setsockopt_int_as_bool_strict (optval_, optvallen_,
+                                                     &norm_unicast_nack);
+#endif
 
         case ZMQ_IMMEDIATE:
             // TODO why is immediate not bool (and called non_immediate, as its meaning appears to be reversed)
@@ -1139,26 +1156,42 @@ int zmq::options_t::getsockopt (int option_,
             }
             break;
 
-        case ZMQ_NORM_FIXED_RATE:
+#if defined ZMQ_HAVE_NORM
+        case ZMQ_NORM_FIXED:
             if (is_int) {
-                *value = norm_fixed_rate;
+                *value = norm_fixed;
                 return 0;
             }
             break;
 
-        case ZMQ_NORM_CONGESTION_CONTROL:
+        case ZMQ_NORM_CC:
             if (is_int) {
-                *value = norm_congest_control;
+                *value = norm_cc;
                 return 0;
             }
             break;
 
-        case ZMQ_NORM_UNICAST_FEEDBACK:
+        case ZMQ_NORM_CCE:
             if (is_int) {
-                *value = norm_unicast_feedback;
+                *value = norm_cce;
                 return 0;
             }
             break;
+
+        case ZMQ_NORM_CCL:
+            if (is_int) {
+                *value = norm_ccl;
+                return 0;
+            }
+            break;
+
+        case ZMQ_NORM_UNICAST_NACK:
+            if (is_int) {
+                *value = norm_unicast_nack;
+                return 0;
+            }
+            break;
+#endif
 
         case ZMQ_MECHANISM:
             if (is_int) {

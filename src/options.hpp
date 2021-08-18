@@ -184,10 +184,13 @@ struct options_t
     tcp_accept_filters_t tcp_accept_filters;
 
     // NORM options
-    int norm_fixed_rate;
-    bool norm_congest_control;
-    bool norm_unicast_feedback;
-    
+#if defined ZMQ_HAVE_NORM
+    int norm_fixed;
+    bool norm_cc;
+    bool norm_cce;
+    bool norm_ccl;
+    bool norm_unicast_nack;
+#endif
 
     // IPC accept() filters
 #if defined ZMQ_HAVE_SO_PEERCRED || defined ZMQ_HAVE_LOCAL_PEERCRED

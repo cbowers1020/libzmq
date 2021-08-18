@@ -765,6 +765,13 @@ ZMQ_EXPORT int zmq_socket_monitor_pipes_stats (void *s);
 
 #endif // ZMQ_BUILD_DRAFT_API
 
+#ifdef ZMQ_HAVE_NORM
+#define ZMQ_NORM_FIXED 115
+#define ZMQ_NORM_CC 116
+#define ZMQ_NORM_CCE 117
+#define ZMQ_NORM_CCL 118
+#define ZMQ_NORM_UNICAST_NACK 119
+#endif
 
 #undef ZMQ_EXPORT
 

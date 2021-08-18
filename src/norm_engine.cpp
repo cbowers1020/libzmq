@@ -36,7 +36,7 @@ zmq::norm_engine_t::norm_engine_t (io_thread_t *parent_,
     is_sender (false),
     is_receiver (false),
     zmq_encoder (0),
-    norm_tx_stream (NORM_OBJECT_INVALID),
+    norm_socket (NORM_SOCKET_INVALID),
     tx_first_msg (true),
     tx_more_bit (false),
     zmq_output_ready (false),
@@ -115,6 +115,13 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
         }
     }
 
+    if (NORM_SOCKET_INVALID == norm_socket) {
+        if (NORM_SOCKET_INVALID == (norm_socket = NormOpen(norm_instance))) {
+            // errno set by whatever cased NormOpen () to fail
+            return -1;
+        }
+    }
+
     // TBD - What do we use for our local NormNodeId?
     //       (for now we use automatic, IP addr based assignment or passed in 'id')
     //       a) Use ZMQ Identity somehow?
@@ -122,7 +129,8 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
     //       c) Randomize and implement a NORM session layer
     //          conflict detection/resolution protocol
 
-    norm_session = NormCreateSession (norm_instance, addr, portNumber, localId);
+    // norm_session = NormCreateSession (norm_instance, addr, portNumber, localId);
+    norm_session = norm_socket.GetSession()
     if (NORM_SESSION_INVALID == norm_session) {
         int savedErrno = errno;
         NormDestroyInstance (norm_instance);
@@ -130,10 +138,53 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
         errno = savedErrno;
         return -1;
     }
+
+    if (recv) {
+        if (!NormListen (norm_socket, portNumber, addr)) {
+            int savedErrno = errno;
+            NormDestroyInstance (norm_instance);
+            norm_socket = NORM_SOCKET_INVALID;
+            norm_session = NORM_SESSION_INVALID;
+            norm_instance = NORM_INSTANCE_INVALID;
+            errno = savedErrno;
+            return -1;
+        }
+        is_receiver = true;
+    }
+    
+    if (send) {
+        if (!NormConnect(norm_socket, NULL, portNumber, 0, addr, localId)) {
+            // errno set by whatever failed
+            int savedErrno = errno;
+            NormDestroyInstance (norm_instance); // session gets closed, too
+            norm_socket = NORM_SOCKET_INVALID;
+            norm_session = NORM_SESSION_INVALID;
+            norm_instance = NORM_INSTANCE_INVALID;
+            errno = savedErrno;
+            return -1;
+        }
+        if(options.norm_cc) {
+            NormSetCongestionControl (norm_session, true);
+            norm_tx_ready = true;
+            is_sender = true;
+        }
+        else
+        {
+            NormSetCongestionControl (norm_session, false, false);
+            NormSetTxRate(norm_session, options.norm_fixed);
+            norm_tx_ready = true;
+            is_sender = true;
+        }
+    }
+
     // There's many other useful NORM options that could be applied here
     if (NormIsUnicastAddress (addr)) {
         NormSetDefaultUnicastNack (norm_session, true);
     } else {
+
+        if (options.norm_unicast_nack) {
+            NormSetDefaultUnicastNack (norm_session, true);
+        }
         // These only apply for multicast sessions
         //NormSetTTL(norm_session, options.multicast_hops);  // ZMQ default is 1
         NormSetTTL (
@@ -151,52 +202,61 @@ int zmq::norm_engine_t::init (const char *network_, bool send, bool recv)
         }
     }
 
-    if (recv) {
-        // The alternative NORM_SYNC_CURRENT here would provide "instant"
-        // receiver sync to the sender's _current_ message transmission.
-        // NORM_SYNC_STREAM tries to get everything the sender has cached/buffered
-        NormSetDefaultSyncPolicy (norm_session, NORM_SYNC_STREAM);
-        if (!NormStartReceiver (norm_session, 2 * 1024 * 1024)) {
-            // errno set by whatever failed
-            int savedErrno = errno;
-            NormDestroyInstance (norm_instance); // session gets closed, too
-            norm_session = NORM_SESSION_INVALID;
-            norm_instance = NORM_INSTANCE_INVALID;
-            errno = savedErrno;
-            return -1;
-        }
-        is_receiver = true;
-    }
+    // if (recv) {
+    //     // The alternative NORM_SYNC_CURRENT here would provide "instant"
+    //     // receiver sync to the sender's _current_ message transmission.
+    //     // NORM_SYNC_STREAM tries to get everything the sender has cached/buffered
+    //     NormSetDefaultSyncPolicy (norm_session, NORM_SYNC_STREAM);
+    //     if (!NormStartReceiver (norm_session, 2 * 1024 * 1024)) {
+    //         // errno set by whatever failed
+    //         int savedErrno = errno;
+    //         NormDestroyInstance (norm_instance); // session gets closed, too
+    //         norm_session = NORM_SESSION_INVALID;
+    //         norm_instance = NORM_INSTANCE_INVALID;
+    //         errno = savedErrno;
+    //         return -1;
+    //     }
+    //     is_receiver = true;
+    // }
 
-    if (send) {
+    // if (send) {
         // Pick a random sender instance id (aka norm sender session id)
-        NormSessionId instanceId = NormGetRandomSessionId ();
-        // TBD - provide "options" for some NORM sender parameters
-        if (!NormStartSender (norm_session, instanceId, 2 * 1024 * 1024, 1400,
-                              16, 4)) {
-            // errno set by whatever failed
-            int savedErrno = errno;
-            NormDestroyInstance (norm_instance); // session gets closed, too
-            norm_session = NORM_SESSION_INVALID;
-            norm_instance = NORM_INSTANCE_INVALID;
-            errno = savedErrno;
-            return -1;
-        }
-        NormSetCongestionControl (norm_session, true);
-        norm_tx_ready = true;
-        is_sender = true;
-        if (NORM_OBJECT_INVALID
-            == (norm_tx_stream =
-                  NormStreamOpen (norm_session, 2 * 1024 * 1024))) {
-            // errno set by whatever failed
-            int savedErrno = errno;
-            NormDestroyInstance (norm_instance); // session gets closed, too
-            norm_session = NORM_SESSION_INVALID;
-            norm_instance = NORM_INSTANCE_INVALID;
-            errno = savedErrno;
-            return -1;
-        }
-    }
+        // NormSessionId instanceId = NormGetRandomSessionId ();
+        // // TBD - provide "options" for some NORM sender parameters
+        // if (!NormStartSender (norm_session, instanceId, 2 * 1024 * 1024, 1400,
+        //                       16, 4)) {
+        //     // errno set by whatever failed
+        //     int savedErrno = errno;
+        //     NormDestroyInstance (norm_instance); // session gets closed, too
+        //     norm_session = NORM_SESSION_INVALID;
+        //     norm_instance = NORM_INSTANCE_INVALID;
+        //     errno = savedErrno;
+        //     return -1;
+        // }
+        // if(options.norm_cc) {
+        //     NormSetCongestionControl (norm_session, true);
+        //     norm_tx_ready = true;
+        //     is_sender = true;
+        // }
+        // else
+        // {
+        //     NormSetCongestionControl (norm_session, false, false);
+        //     NormSetTxRate(norm_session, options.norm_fixed);
+        //     norm_tx_ready = true;
+        //     is_sender = true;
+        // }
+        // if (NORM_SOCKET_INVALID
+        //     == (norm_tx_socket =
+        //           NormStreamOpen (norm_session, 2 * 1024 * 1024))) {
+        //     // errno set by whatever failed
+        //     int savedErrno = errno;
+        //     NormDestroyInstance (norm_instance); // session gets closed, too
+        //     norm_session = NORM_SESSION_INVALID;
+        //     norm_instance = NORM_INSTANCE_INVALID;
+        //     errno = savedErrno;
+        //     return -1;
+        // }
+    // }
 
     //NormSetMessageTrace(norm_session, true);
     //NormSetDebugLevel(3);
