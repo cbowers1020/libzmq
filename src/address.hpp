@@ -58,6 +58,9 @@ class tipc_address_t;
 #if defined ZMQ_HAVE_VMCI
 class vmci_address_t;
 #endif
+#if defined ZMQ_HAVE_NORM
+class norm_address_t;
+#endif
 
 namespace protocol_name
 {
@@ -121,6 +124,9 @@ struct address_t
 #endif
 #if defined ZMQ_HAVE_VMCI
         vmci_address_t *vmci_addr;
+#endif
+#ifdef ZMQ_HAVE_NORM
+        norm_address_t *norm_addr;
 #endif
     } resolved;
 

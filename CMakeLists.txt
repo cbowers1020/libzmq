@@ -928,6 +928,7 @@ set(cxx-sources
     msg.cpp
     mtrie.cpp
     norm_engine.cpp
+    norm_listener.cpp
     object.cpp
     options.cpp
     own.cpp
@@ -1057,6 +1058,7 @@ set(cxx-sources
     mtrie.hpp
     mutex.hpp
     norm_engine.hpp
+    norm_listener.hpp
     null_mechanism.hpp
     object.hpp
     options.hpp

@@ -4,11 +4,6 @@
 
 #if defined ZMQ_HAVE_NORM
 
-#if defined(ZMQ_HAVE_WINDOWS) && defined(ZMQ_IOTHREAD_POLLER_USE_EPOLL)
-#define ZMQ_USE_NORM_SOCKET_WRAPPER
-#endif
-
-
 #include "io_object.hpp"
 #include "i_engine.hpp"
 #include "options.hpp"
@@ -16,7 +11,6 @@
 #include "v2_encoder.hpp"
 
 #include <normApi.h>
-#include <normSocket.h>
 
 namespace zmq
 {
@@ -65,7 +59,7 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
   private:
     void unplug ();
     void send_data ();
-    void recv_data (NormSocketHandle socket);
+    void recv_data (NormObjectHandle stream);
 
 
     enum
@@ -74,16 +68,16 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
     };
 
     // Used to keep track of streams from multiple senders
-    class NormRxSocketmState
+    class NormRxStreamState
     {
       public:
-        NormRxSocketState (NormSocketHandle normocket,
+        NormRxStreamState (NormObjectHandle normStream,
                            int64_t maxMsgSize,
                            bool zeroCopy,
                            int inBatchSize);
         ~NormRxStreamState ();
 
-        NormSocketHandle GetSocketHandle () const { return norm_stream; }
+        NormObjectHandle GetStreamHandle () const { return norm_stream; }
 
         bool Init ();
 
@@ -112,8 +106,8 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
             List ();
             ~List ();
 
-            void Append (NormRxSocketState &item);
-            void Remove (NormRxSocketState &item);
+            void Append (NormRxStreamState &item);
+            void Remove (NormRxStreamState &item);
 
             bool IsEmpty () const { return NULL == head; }
 
@@ -123,16 +117,16 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
             {
               public:
                 Iterator (const List &list);
-                NormRxSocketState *GetNextItem ();
+                NormRxStreamState *GetNextItem ();
 
               private:
-                NormRxSocketState *next_item;
+                NormRxStreamState *next_item;
             };
             friend class Iterator;
 
           private:
-            NormRxSocketState *head;
-            NormRxSocketState *tail;
+            NormRxStreamState *head;
+            NormRxStreamState *tail;
 
         }; // end class zmq::norm_engine_t::NormRxStreamState::List
 
@@ -142,7 +136,7 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
 
 
       private:
-        NormSocketHandle norm_socket;
+        NormObjectHandle norm_stream;
         int64_t max_msg_size;
         bool zero_copy;
         int in_batch_size;
@@ -154,9 +148,9 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
         size_t buffer_size;
         size_t buffer_count;
 
-        NormRxSocketState *prev;
-        NormRxSocketState *next;
-        NormRxSocketState::List *list;
+        NormRxStreamState *prev;
+        NormRxStreamState *next;
+        NormRxStreamState::List *list;
 
     }; // end class zmq::norm_engine_t::NormRxStreamState
 
@@ -172,7 +166,7 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
     // Sender state
     msg_t tx_msg;
     v2_encoder_t zmq_encoder; // for tx messages (we use v2 for now)
-    NormSocketHandle norm_socket;
+    NormObjectHandle norm_tx_stream;
     bool tx_first_msg;
     bool tx_more_bit;
     bool zmq_output_ready; // zmq has msg(s) to send
@@ -185,19 +179,13 @@ class norm_engine_t ZMQ_FINAL : public io_object_t, public i_engine
     // Receiver state
     // Lists of norm rx streams from remote senders
     bool zmq_input_ready; // zmq ready to receive msg(s)
-    NormRxSocketState::List
+    NormRxStreamState::List
       rx_pending_list; // rx streams waiting for data reception
-    NormRxSocketState::List
+    NormRxStreamState::List
       rx_ready_list; // rx streams ready for NormStreamRead()
-    NormRxSocketState::List
+    NormRxStreamState::List
       msg_ready_list; // rx streams w/ msg ready for push to zmq
 
-#ifdef ZMQ_USE_NORM_SOCKET_WRAPPER
-    fd_t
-      wrapper_read_fd; // filedescriptor used to read norm events through the wrapper
-    DWORD wrapper_thread_id;
-    HANDLE wrapper_thread_handle;
-#endif
 
 }; // end class norm_engine_t
 }

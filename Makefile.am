@@ -119,6 +119,8 @@ src_libzmq_la_SOURCES = \
 	src/mutex.hpp \
 	src/norm_engine.cpp \
 	src/norm_engine.hpp \
+	src/norm_listener.cpp \
+	src/norm_listener.hpp \
 	src/null_mechanism.cpp \
 	src/null_mechanism.hpp \
 	src/object.cpp \
