@@ -72,6 +72,10 @@ NormSocketHandle zmq::norm_listener_t::FindClientSocket(ClientMap& clientMap, co
 
 void zmq::norm_listener_t::in_event ()
 {
+  // Are these only going to be ACCEPT events?
+  // tcp Listener only seems to have accept events...
+  // _s is inherited from stream_listener_base.cpp
+  // It is the underlying socket. Is that a NORM socket?
   NormSocketEvent event;
   if (!NormGetSocketEvent(_norm_instance, &event)) {
     // NORM has died before we unplugged?!
@@ -96,9 +100,11 @@ void zmq::norm_listener_t::in_event ()
           // fprintf(stderr, "normServer: duplicative %s from client %s/%hu...\n",
           //         (NORM_REMOTE_SENDER_NEW == event.event.type) ? "new" : "reset",
           //         clientInfo.GetAddressString(), clientInfo.GetPort());
-          continue;
+          return;
         }
         NormSocketHandle clientSocket = NormAccept (_norm_server_socket, event.sender);
+
+
 
         if (clientSocket == retired_fd) {
           _socket->event_accept_failed (
@@ -120,11 +126,6 @@ void zmq::norm_listener_t::in_event ()
       }
       break;
     }
-    // case NORM_SOCKET_CONNECT:
-    // {
-    //   Client* client = FindClient (_clientMap, clientInfo);
-    //   zmq_assert (NULL != client);
-    // }
   }
 }
 
@@ -143,6 +144,8 @@ zmq::norm_listener_t::get_socket_name (zmq::fd_t fd_,
 
 int zmq::norm_listener_t::create_socket (const char *addr_) const
 {
+  // This needs to listen to the group address
+
   // Parse the "addr_" address int "iface", "addr", and "port"
   // norm endpoint format: [id,][<iface>;]<addr>:<port>
   // First, look for optional local NormNodeId

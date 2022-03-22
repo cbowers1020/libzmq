@@ -116,6 +116,7 @@ int zmq::norm_address_t::resolve (const char *name_, bool local_, bool ipv6_)
     }
   }
 
+  // This is Group address
   // Finally parse Ip address and port number
   const char *portPtr = strrchr (name_, ':');
   if (NULL == portPtr) {
@@ -133,6 +134,7 @@ int zmq::norm_address_t::resolve (const char *name_, bool local_, bool ipv6_)
     .expect_port (true);
 
   ip_resolver_t resolver (resolver_opts);
+  // This resolves the group address, I believe as that is all that is left in the name_ variable
   return resolver.resolve (&_address, name_);
 }
 
