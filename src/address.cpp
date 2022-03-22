@@ -49,9 +49,7 @@
 zmq::address_t::address_t (const std::string &protocol_,
                            const std::string &address_,
                            ctx_t *parent_) :
-    protocol (protocol_),
-    address (address_),
-    parent (parent_)
+    protocol (protocol_), address (address_), parent (parent_)
 {
     resolved.dummy = NULL;
 }
