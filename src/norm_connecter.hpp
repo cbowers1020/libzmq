@@ -62,6 +62,7 @@ class norm_connecter_t ZMQ_FINAL : public stream_connecter_base_t
     void process_term (int linger_);
 
     // Handlers for i/o events.
+    // What events does a norm client have to handle
     void out_event ();
     void timer_event (int id_);
 

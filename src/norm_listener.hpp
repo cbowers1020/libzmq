@@ -106,6 +106,7 @@ class norm_listener_t ZMQ_FINAL : public stream_listener_base_t
     };  // end class Client
 
     // Handlers for I/O events
+    // What events does a Norm Server have to handle?
     void in_event ();
 
     int create_socket (const char *addr_);
