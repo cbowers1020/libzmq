@@ -78,7 +78,7 @@ void zmq::norm_connecter_t::process_term (int linger_)
   }
 }
 
-void zmq::tcp_connecter_t::out_event ()
+void zmq::norm_connecter_t::out_event ()
 {
   if (_connect_timer_started) {
     cancel_timer (connect_timer_id);
@@ -87,7 +87,7 @@ void zmq::tcp_connecter_t::out_event ()
 
   rm_handle ();
 
-  const fd_t fd = connect ();
+  const fd_t fdr = connect ();
 
   if (fd == retired_fd
       && ((options.reconnect_stop & ZMQ_RECONNECT_STOP_CONN_REFUSED)
@@ -99,7 +99,7 @@ void zmq::tcp_connecter_t::out_event ()
   }
 
   //  Handle the error condition by attempt to reconnect.
-  if (fd == retired_fd || !tune_socket (fd)) {
+  if (fd == retired_fd || !tune_socket (fd)) { // tcp had a tune socket function. I need to implement one. Not sure what that looks like for norm
       close ();
       add_reconnect_timer ();
       return;
@@ -181,7 +181,7 @@ int zmq::norm_connecter_t::open ()
     return -1;
   }
 
-  _norm_client_socket = NormOpen (instance);
+  _norm_client_socket = NormOpen (_norm_instance);
 
   zmq_assert (_addr->resolved.norm_addr != NULL);
 
