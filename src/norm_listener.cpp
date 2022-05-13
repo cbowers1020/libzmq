@@ -120,6 +120,8 @@ void zmq::norm_listener_t::in_event ()
 
         //  Create the engine object for this connection.
         create_engine (clientSocket);
+        //tcp listener has:
+        // create_engine (fd); where fd is the file descriptor returned by the tcp accept call
       }
       else {
         // Should never get here, I think
